@@ -17,6 +17,7 @@ export default function Dashboard() {
     turma: '',
     finalidade: '',
   })
+  const [mensagem, setMensagem] = useState('')
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((currentUser) => {
@@ -55,7 +56,7 @@ export default function Dashboard() {
       await addDoc(collection(db, 'reservas'), {
         userId: user.uid,
         email: user.email,
-        nome: user.displayName,
+        nome: user.displayName || user.email?.split('@')[0],
         sala: formData.sala,
         data: formData.data,
         hora: formData.hora,
@@ -67,11 +68,13 @@ export default function Dashboard() {
 
       setFormData({ sala: 'video', data: '', hora: '', turma: '', finalidade: '' })
       setShowForm(false)
+      setMensagem('✅ Reserva criada com sucesso!')
+      setTimeout(() => setMensagem(''), 3000)
       carregarReservas(user.uid)
-      alert('Reserva criada com sucesso!')
     } catch (error) {
       console.error('Erro ao criar reserva:', error)
-      alert('Erro ao criar reserva')
+      setMensagem('❌ Erro ao criar reserva')
+      setTimeout(() => setMensagem(''), 3000)
     }
   }
 
@@ -80,10 +83,12 @@ export default function Dashboard() {
       try {
         await deleteDoc(doc(db, 'reservas', id))
         carregarReservas(user.uid)
-        alert('Reserva cancelada com sucesso!')
+        setMensagem('✅ Reserva cancelada com sucesso!')
+        setTimeout(() => setMensagem(''), 3000)
       } catch (error) {
         console.error('Erro ao cancelar reserva:', error)
-        alert('Erro ao cancelar reserva')
+        setMensagem('❌ Erro ao cancelar reserva')
+        setTimeout(() => setMensagem(''), 3000)
       }
     }
   }
@@ -112,8 +117,8 @@ export default function Dashboard() {
           </div>
           <div className="flex items-center gap-4">
             <div className="text-right">
-              <p className="font-semibold text-gray-900">{user?.displayName}</p>
-              <p className="text-sm text-gray-600">{user?.email}</p>
+              <p className="font-semibold text-gray-900">{user?.email}</p>
+              <p className="text-sm text-gray-600">Professor</p>
             </div>
             <button
               onClick={handleLogout}
@@ -127,8 +132,15 @@ export default function Dashboard() {
 
       {/* Main */}
       <main className="max-w-7xl mx-auto px-4 py-8">
+        {/* Mensagem */}
+        {mensagem && (
+          <div className="mb-6 p-4 bg-blue-100 border border-blue-400 text-blue-700 rounded-lg">
+            {mensagem}
+          </div>
+        )}
+
         <div className="mb-8">
-          <h2 className="text-3xl font-bold text-gray-900 mb-4">Bem-vindo, {user?.displayName?.split(' ')[0]}!</h2>
+          <h2 className="text-3xl font-bold text-gray-900 mb-4">Bem-vindo!</h2>
           <button
             onClick={() => setShowForm(!showForm)}
             className="bg-primary hover:bg-blue-700 text-white font-bold py-2 px-6 rounded transition"
@@ -150,9 +162,9 @@ export default function Dashboard() {
                     onChange={(e) => setFormData({ ...formData, sala: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                   >
-                    <option value="video">Sala de Vídeo</option>
-                    <option value="laboratorio">Laboratório de Informática</option>
-                    <option value="recursos">Recursos Pedagógicos</option>
+                    <option value="video">🎥 Sala de Vídeo</option>
+                    <option value="laboratorio">💻 Laboratório de Informática</option>
+                    <option value="recursos">📚 Recursos Pedagógicos</option>
                   </select>
                 </div>
 
@@ -184,6 +196,7 @@ export default function Dashboard() {
                     type="text"
                     value={formData.turma}
                     onChange={(e) => setFormData({ ...formData, turma: e.target.value })}
+                    placeholder="Ex: 9º A"
                     required
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                   />
@@ -196,6 +209,7 @@ export default function Dashboard() {
                   type="text"
                   value={formData.finalidade}
                   onChange={(e) => setFormData({ ...formData, finalidade: e.target.value })}
+                  placeholder="Ex: Aula de Biologia"
                   required
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                 />
@@ -217,6 +231,7 @@ export default function Dashboard() {
           {reservas.length === 0 ? (
             <div className="bg-white p-6 rounded-lg shadow-md text-center text-gray-600">
               <p>Você não tem reservas no momento</p>
+              <p className="text-sm mt-2">Clique em "+ Nova Reserva" para agendar uma sala</p>
             </div>
           ) : (
             <div className="grid gap-4">
@@ -227,7 +242,7 @@ export default function Dashboard() {
                       <h4 className="text-lg font-bold text-gray-900">
                         {reserva.sala === 'video' ? '🎥 Sala de Vídeo' : reserva.sala === 'laboratorio' ? '💻 Laboratório' : '📚 Recursos'}
                       </h4>
-                      <p className="text-sm text-gray-600">{reserva.turma}</p>
+                      <p className="text-sm text-gray-600">Turma: {reserva.turma}</p>
                     </div>
                     <span className="bg-green-100 text-green-800 px-3 py-1 rounded text-sm font-semibold">
                       {reserva.status}
