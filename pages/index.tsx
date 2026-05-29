@@ -1,11 +1,15 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/router'
 import { auth } from '@/lib/firebase'
-import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth'
+import { signInWithEmailAndPassword } from 'firebase/auth'
 
 export default function Home() {
   const router = useRouter()
   const [loading, setLoading] = useState(true)
+  const [email, setEmail] = useState('')
+  const [senha, setSenha] = useState('')
+  const [erro, setErro] = useState('')
+  const [carregando, setCarregando] = useState(false)
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((currentUser) => {
@@ -17,12 +21,28 @@ export default function Home() {
     return () => unsubscribe()
   }, [router])
 
-  const handleLogin = async () => {
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setCarregando(true)
+    setErro('')
+
     try {
-      const provider = new GoogleAuthProvider()
-      await signInWithPopup(auth, provider)
-    } catch (error) {
+      await signInWithEmailAndPassword(auth, email, senha)
+      router.push('/dashboard')
+    } catch (error: any) {
       console.error('Erro ao fazer login:', error)
+      
+      if (error.code === 'auth/user-not-found') {
+        setErro('Usuário não encontrado. Verifique o email.')
+      } else if (error.code === 'auth/wrong-password') {
+        setErro('Senha incorreta.')
+      } else if (error.code === 'auth/invalid-email') {
+        setErro('Email inválido.')
+      } else {
+        setErro('Erro ao fazer login. Tente novamente.')
+      }
+    } finally {
+      setCarregando(false)
     }
   }
 
@@ -54,41 +74,102 @@ export default function Home() {
 
       {/* Main */}
       <main className="max-w-7xl mx-auto px-4 py-20">
-        <div className="text-center mb-12">
-          <h2 className="text-4xl font-bold text-gray-900 mb-4">
-            Organize seus Agendamentos com Facilidade
-          </h2>
-          <p className="text-xl text-gray-600 mb-8">
-            Plataforma inteligente para agendar salas de vídeo, laboratório de informática e recursos pedagógicos
-          </p>
-          <button
-            onClick={handleLogin}
-            className="bg-primary hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg transition"
-          >
-            Entrar com Google
-          </button>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+          {/* Left side - Info */}
+          <div>
+            <h2 className="text-4xl font-bold text-gray-900 mb-4">
+              Organize seus Agendamentos com Facilidade
+            </h2>
+            <p className="text-xl text-gray-600 mb-8">
+              Plataforma inteligente para agendar salas de vídeo, laboratório de informática e recursos pedagógicos
+            </p>
+
+            {/* Features */}
+            <div className="space-y-4">
+              <div className="flex gap-3">
+                <span className="text-2xl">📅</span>
+                <div>
+                  <h3 className="font-bold text-gray-900">Calendário Interativo</h3>
+                  <p className="text-gray-600 text-sm">Visualize disponibilidades com código de cores</p>
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <span className="text-2xl">🔒</span>
+                <div>
+                  <h3 className="font-bold text-gray-900">Controle de Prioridades</h3>
+                  <p className="text-gray-600 text-sm">Regras automáticas por categoria de professor</p>
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <span className="text-2xl">⚡</span>
+                <div>
+                  <h3 className="font-bold text-gray-900">Sem Conflitos</h3>
+                  <p className="text-gray-600 text-sm">Sistema previne reservas duplicadas</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Right side - Login Form */}
+          <div className="bg-white p-8 rounded-lg shadow-lg">
+            <h3 className="text-2xl font-bold text-gray-900 mb-6">Fazer Login</h3>
+
+            {erro && (
+              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+                {erro}
+              </div>
+            )}
+
+            <form onSubmit={handleLogin} className="space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-900 mb-2">
+                  Email Institucional
+                </label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="seu.email@escolafelicio.edu.br"
+                  required
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-900 mb-2">
+                  Senha
+                </label>
+                <input
+                  type="password"
+                  value={senha}
+                  onChange={(e) => setSenha(e.target.value)}
+                  placeholder="Digite sua senha"
+                  required
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={carregando}
+                className="w-full bg-primary hover:bg-blue-700 disabled:bg-gray-400 text-white font-bold py-3 px-4 rounded-lg transition"
+              >
+                {carregando ? 'Entrando...' : 'Entrar'}
+              </button>
+            </form>
+
+            <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <p className="text-sm text-gray-700">
+                <strong>Não tem conta?</strong> Solicite ao administrador para criar sua conta no sistema.
+              </p>
+            </div>
+          </div>
         </div>
 
-        {/* Features */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-16">
-          <div className="bg-white p-6 rounded-lg shadow-md border-l-4 border-primary">
-            <h3 className="text-xl font-bold text-gray-900 mb-2">📅 Calendário Interativo</h3>
-            <p className="text-gray-600">Visualize disponibilidades em vistas semanal e mensal com código de cores intuitivo</p>
-          </div>
-
-          <div className="bg-white p-6 rounded-lg shadow-md border-l-4 border-secondary">
-            <h3 className="text-xl font-bold text-gray-900 mb-2">🔒 Controle de Prioridades</h3>
-            <p className="text-gray-600">Regras automáticas: 7 dias para regulares, 21 para técnicos, sem conflitos</p>
-          </div>
-
-          <div className="bg-white p-6 rounded-lg shadow-md border-l-4 border-green-500">
-            <h3 className="text-xl font-bold text-gray-900 mb-2">⚡ Sem Conflitos</h3>
-            <p className="text-gray-600">Sistema automático previne reservas duplicadas no mesmo horário</p>
-          </div>
-        </div>
-
-        {/* Info */}
-        <div className="mt-16 bg-white p-8 rounded-lg shadow-md">
+        {/* Info Footer */}
+        <div className="mt-20 bg-white p-8 rounded-lg shadow-md">
           <h3 className="text-2xl font-bold text-gray-900 mb-4">Sobre a Escola</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-gray-600">
             <div>
